@@ -1,11 +1,11 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="en">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mermaid Live Pako 生成器 (带切换)</title>
-    <!-- 引入 pako 压缩库 -->
+    <title>Mermaid Live Pako Generator (With Toggle)</title>
+    <!-- Import pako compression library -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js"></script>
     <style>
         html,
@@ -41,7 +41,7 @@
             overflow: hidden;
         }
 
-        /* 响应式布局：宽屏左右，窄屏上下 */
+        /* Responsive layout: wide screen left-right, narrow screen top-down */
         @media (min-width: 768px) {
             #main-content {
                 flex-direction: row;
@@ -49,7 +49,7 @@
 
             .panel:nth-child(1) {
                 flex: 4;
-                /* 编辑区相对小一点 */
+                /* Editor area is slightly smaller */
             }
 
             .panel:nth-child(2) {
@@ -64,7 +64,7 @@
 
             .panel:nth-child(1) {
                 flex: 0 0 35%;
-                /* 编辑区占 35% 高度 */
+                /* Editor area takes 35% height */
             }
 
             .panel:nth-child(2) {
@@ -80,6 +80,25 @@
             border-radius: 8px;
             overflow: hidden;
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+        }
+
+        /* Remove radius and border on full screen, hide bottom link bar */
+        .panel:fullscreen {
+            border-radius: 0;
+            border: none;
+        }
+
+        .panel:fullscreen .link-bar {
+            display: none;
+        }
+
+        .panel:-webkit-full-screen {
+            border-radius: 0;
+            border: none;
+        }
+
+        .panel:-webkit-full-screen .link-bar {
+            display: none;
         }
 
         .panel-header {
@@ -176,12 +195,17 @@
             background-color: #e1e4e8;
         }
 
-        /* --- 开关样式 (Toggle Switch) --- */
+        .btn-link.active {
+            background-color: #eaecef;
+            box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.05);
+        }
+
+        /* --- Toggle Switch Styles --- */
         .switch {
             position: relative;
             display: inline-block;
-            width: 28px;
-            height: 16px;
+            width: 20px;
+            height: 12px;
         }
 
         .switch input {
@@ -205,8 +229,8 @@
         .slider:before {
             position: absolute;
             content: "";
-            height: 12px;
-            width: 12px;
+            height: 8px;
+            width: 8px;
             left: 2px;
             bottom: 2px;
             background-color: white;
@@ -223,11 +247,11 @@
         }
 
         input:checked+.slider:before {
-            transform: translateX(12px);
+            transform: translateX(8px);
         }
 
         .switch-label {
-            font-size: 13px;
+            font-size: 12px;
             color: #666;
             font-weight: normal;
         }
@@ -237,38 +261,39 @@
 <body>
 
     <div id="container">
-        <h1>Mermaid.live Pako 链接生成器</h1>
+        <h1>Mermaid.live Pako Link Generator</h1>
         <div id="main-content">
-            <!-- 左侧输入区 -->
+            <!-- Left Input Area -->
             <div class="panel">
                 <div class="panel-header">
-                    <span class="header-title">Markdown 代码</span>
+                    <span class="header-title">Mermaid Code</span>
                 </div>
-                <textarea id="mermaid-input" placeholder="在此输入 Mermaid 代码..."></textarea>
+                <textarea id="mermaid-input" placeholder="Enter Mermaid code here..."></textarea>
             </div>
 
-            <!-- 右侧预览区 -->
+            <!-- Right Preview Area -->
             <div class="panel">
                 <div class="panel-header">
                     <div class="header-title">
-                        <span>实时预览</span>
-                        <!-- 开关组件 -->
-                        <div style="display: flex; align-items: center; gap: 8px; margin-left: 10px;">
-                            <span class="switch-label"> 工具条</span>
+                        <span>Live Preview</span>
+                        <!-- Toggle Component -->
+                        <label for="edit-mode-toggle"
+                            style="display: flex; align-items: center; gap: 4px; margin-left: 10px;">
+                            <span class="switch-label">Toolbar</span>
                             <label class="switch">
                                 <input type="checkbox" id="edit-mode-toggle">
                                 <span class="slider"></span>
                             </label>
 
-                        </div>
+                        </label>
                     </div>
-                    <button id="fullscreen-btn" class="btn-link">⛶
-                        全屏</button>
+                    <button id="fullscreen-btn" class="btn-link" title="Full Screen">⛶</button>
                 </div>
                 <iframe id="preview-frame" src="about:blank"></iframe>
                 <div class="link-bar">
-                    <div id="link-display">生成的链接将显示在这里...</div>
-                    <button id="copy-btn" title="复制链接" style="display:flex;align-items:center;justify-content:center;">
+                    <div id="link-display">Generated link will appear here...</div>
+                    <button id="copy-btn" title="Copy Link"
+                        style="display:flex;align-items:center;justify-content:center;">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                             stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
@@ -288,7 +313,7 @@
         const editToggle = document.getElementById('edit-mode-toggle');
 
 
-        // Mermaid 默认配置
+        // Mermaid Default Config
         const defaultState = {
             code: "",
             mermaid: { "theme": "default" },
@@ -302,7 +327,7 @@
     B -- No --> D[Debug]
     D --> B`;
 
-        // 核心压缩函数 (Pako Deflate -> Base64 -> URL Safe)
+        // Core Compression Function (Pako Deflate -> Base64 -> URL Safe)
         function serialize(code) {
             const state = { ...defaultState, code: code };
             const jsonString = JSON.stringify(state);
@@ -318,7 +343,7 @@
             return base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
         }
 
-        // 更新预览逻辑
+        // Update Preview Logic
         function updatePreview() {
             const code = inputArea.value;
             if (!code.trim()) return;
@@ -326,14 +351,14 @@
             try {
                 const pakoHash = serialize(code);
 
-                // 根据开关状态决定 Base URL
-                // 开: /edit, 关: /view
+                // Determine Base URL based on toggle state
+                // On: /edit, Off: /view
                 const mode = editToggle.checked ? 'edit' : 'view';
                 const baseUrl = `https://mermaid.live/${mode}#pako:`;
 
                 const fullUrl = baseUrl + pakoHash;
 
-                // 只有 URL 确实改变了才刷新 iframe，避免闪烁
+                // Only refresh iframe if URL actually changed to avoid flickering
                 if (previewFrame.src !== fullUrl) {
                     previewFrame.src = fullUrl;
                 }
@@ -342,13 +367,13 @@
                 // newTabLink.href = fullUrl;
 
             } catch (e) {
-                console.error("生成出错:", e);
+                console.error("Generation Error:", e);
                 linkDisplay.textContent = "Error: " + e.message;
             }
         }
 
 
-        // 复制链接功能
+        // Copy Link Function
         const copyBtn = document.getElementById('copy-btn');
         copyBtn.addEventListener('click', () => {
             const url = linkDisplay.textContent;
@@ -361,40 +386,49 @@
                     copyBtn.innerHTML = originalHtml;
                 }, 1500);
             }).catch(err => {
-                console.error('复制失败:', err);
-                alert('复制失败，请手动复制');
+                console.error('Copy Failed:', err);
+                alert('Copy failed, please copy manually');
             });
         });
 
-        // 监听开关变化
+        // Listen for toggle changes
         editToggle.addEventListener('change', () => {
             // modeStatus.textContent = editToggle.checked ? "(On)" : "(Off)";
-            updatePreview(); // 立即刷新
+            updatePreview(); // Refresh immediately
         });
 
-        // 全屏监听
+        // Full Screen Listener
         fullscreenBtn.addEventListener('click', () => {
             const previewPanel = fullscreenBtn.closest('.panel');
             if (!document.fullscreenElement) {
                 previewPanel.requestFullscreen().catch(err => {
-                    console.error("无法启用全屏:", err);
+                    console.error("Unable to enable full screen:", err);
                 });
             } else {
                 document.exitFullscreen();
             }
         });
 
-        // 监听输入变化（带防抖）
+        // Listen for full screen change events, update button state
+        document.addEventListener('fullscreenchange', () => {
+            if (document.fullscreenElement) {
+                fullscreenBtn.classList.add('active');
+            } else {
+                fullscreenBtn.classList.remove('active');
+            }
+        });
+
+        // Listen for input changes (with debounce)
         let timeout = null;
         inputArea.addEventListener('input', () => {
             clearTimeout(timeout);
             timeout = setTimeout(updatePreview, 500);
         });
 
-        // 初始化
+        // Initialization
         window.addEventListener('load', () => {
             inputArea.value = defaultCode;
-            // 默认确保开关是关闭的
+            // Ensure toggle is off by default
             editToggle.checked = false;
             updatePreview();
         });
